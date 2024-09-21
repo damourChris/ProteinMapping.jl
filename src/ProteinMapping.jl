@@ -15,7 +15,6 @@ function map_to_stable_ensembl_peptide(ids_to_map::Vector{String},
     R"""
     suppressPackageStartupMessages({
         library(biomaRt)
-        
         library(httr)
     })
     set_config(config(ssl_verifypeer = 0L))
@@ -30,7 +29,7 @@ function map_to_stable_ensembl_peptide(ids_to_map::Vector{String},
     mapping_r = @rget mapping
     mapping = convert(DataFrame, mapping_r)
 
-    return esetmapping
+    return mapping
 end
 
 end
