@@ -4,6 +4,7 @@ include("resolve_env.jl")
 
 using DataFrames
 using RCall
+using ProgressMeter
 import Base.Threads.@spawn
 
 include(joinpath("utils.jl"))
@@ -52,13 +53,17 @@ function map_to_stable_ensembl_peptide_batched(ids_to_map::Vector{String},
     # Create a channel to collect results
     result_channel = Channel(length(chunks))
 
-    # Initialize an empty DataFrame to store the results
-    mapping = DataFrame()
+    # Create a progress bar
+    p = Progress(length(chunks), 1)
+
+    # Atomic counter for completed chunks
+    completed_chunks = Threads.Atomic{Int}(0)
 
     # Function to process a chunk
     function process_chunk(chunk)
         mapping_chunk = map_to_stable_ensembl_peptide(chunk, attribute)
-        return put!(result_channel, mapping_chunk)
+        put!(result_channel, mapping_chunk)
+        return Threads.atomic_add!(completed_chunks, 1)
     end
 
     # Submit tasks to the thread pool
@@ -67,17 +72,25 @@ function map_to_stable_ensembl_peptide_batched(ids_to_map::Vector{String},
         push!(threads, @spawn process_chunk(chunk))
     end
 
-    # Collect results
+    # Collect results and update progress
     mapping_chunks = Vector{DataFrame}(undef, length(chunks))
     for i in 1:length(chunks)
         mapping_chunks[i] = take!(result_channel)
+        next!(p)
     end
 
     # Combine results
     mapping = reduce(vcat, mapping_chunks)
 
+    finish!(p)  # Mark the progress as finished
+
     return mapping
 end
 
+# Genreate 100 randoms Ensembl gene IDs
+# base_prefix = "ENSG"
+# Note that all ensembl gene IDs start with ENSG and have exactly 11 numbers so we can use lpad
+# ensembl_gene_ids = [base_prefix * lpad(rand(1:99999), 11, "0") for i in 1:100]
+# map_to_stable_ensembl_peptide(unique(ensembl_gene_ids), "ensembl_gene_id")
 
 end
