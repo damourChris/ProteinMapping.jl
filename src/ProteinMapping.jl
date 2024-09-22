@@ -8,6 +8,8 @@ using RCall
 const mart_id = "ensembl"
 const mart_dataset = "hsapiens_gene_ensembl"
 
+export map_to_stable_ensembl_peptide
+
 function map_to_stable_ensembl_peptide(ids_to_map::Vector{String},
                                        attribute::String)
     @rput ids_to_map attribute mart_id mart_dataset
